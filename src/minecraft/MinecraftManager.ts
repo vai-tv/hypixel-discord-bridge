@@ -12,9 +12,38 @@ export class MinecraftManager {
   public bot: Bot | null = null;
 
   private bridge: Bridge;
+  private messageQueue: string[] = [];
+  private isProcessingQueue = false;
+  private readonly MESSAGE_DELAY_MS = 1200; // 1.2 seconds between messages
 
   constructor(bridge: Bridge) {
     this.bridge = bridge;
+  }
+
+  public send(message: string): void {
+    // sanitise newlines to prevent sending empty or broken packets
+    const cleanMessage = message.replace(/[\r\n]+/g, ' ').trim();
+    if (!cleanMessage) return;
+
+    this.messageQueue.push(cleanMessage);
+    this.processQueue();
+  }
+
+  private async processQueue(): Promise<void> {
+    if (this.isProcessingQueue || !this.bot) return;
+
+    this.isProcessingQueue = true;
+
+    while (this.messageQueue.length > 0) {
+      const message = this.messageQueue.shift();
+      if (message && this.bot) {
+        this.send(message);
+        // wait before sending the next packet in queue
+        await setTimeout(this.MESSAGE_DELAY_MS);
+      }
+    }
+
+    this.isProcessingQueue = false;
   }
 
   public connect(): void {
@@ -67,11 +96,11 @@ export class MinecraftManager {
             if (!this.bot) return;
 
             if (data.channel === 'guild') {
-                this.bot.chat(`/gc ${data.rank} ${data.username}: ${data.message}`);
+                this.send(`/gc ${data.username}: ${data.message}`);
             } else if (data.channel === 'officer') {
-                this.bot.chat(`/oc ${data.username}: ${data.message}`);
+                this.send(`/oc ${data.username}: ${data.message}`);
             } else if (data.channel === 'debug') {
-                this.bot.chat(`${data.message}`);
+                this.send(`${data.message}`);
             }
         });
     }
