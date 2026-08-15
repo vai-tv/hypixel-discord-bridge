@@ -2,7 +2,7 @@ import { Client, GatewayIntentBits, PermissionFlagsBits, TextChannel, WebhookCli
 import { Bridge } from "../bridge/Bridge.js";
 import type { MinecraftChatMessage, ChatChannel } from "../bridge/Bridge.js";
 import { environment } from "../EnvHandler.js";
-
+import config from '../../config.json' with { type: "json" };
 import { getUUID } from "../api/MojangAPI.js";
 
 const REQUIRED_PERMISSIONS = [
@@ -16,7 +16,8 @@ const REQUIRED_PERMISSIONS = [
 export class DiscordManager {
     private client: Client;
     private bridge: Bridge;
-    private webhookClient: WebhookClient | null = null;
+    private guildWebhook: WebhookClient | null = null;
+    private officerWebhook: WebhookClient | null = null;
 
     constructor(bridge: Bridge) {
         this.bridge = bridge;
@@ -28,10 +29,13 @@ export class DiscordManager {
             ]
         });
 
-        if (environment.discord.webhookUrl && environment.discord.webhookUrl.trim() !== '') {
-            this.webhookClient = new WebhookClient({ url: environment.discord.webhookUrl });
-        } else { 
-            this.webhookClient = null;
+        if (config.bot.useWebhooks) {
+            if (environment.discord.guildWebhookUrl?.trim()) {
+                this.guildWebhook = new WebhookClient({ url: environment.discord.guildWebhookUrl });
+            }
+            if (environment.discord.officerWebhookUrl?.trim()) {
+                this.officerWebhook = new WebhookClient({ url: environment.discord.officerWebhookUrl });
+            }
         }
     }
 
@@ -40,10 +44,8 @@ export class DiscordManager {
 
         try {
             await this.client.login(environment.discord.token);
-
             await new Promise<void>((resolve) => this.client.once('ready', () => resolve()));
             await this.verifyPermissions();
-
             return true;
         } catch (error: any) {
             this.handleError(error);
@@ -52,9 +54,8 @@ export class DiscordManager {
     }
 
     private handleError(error: any): void {
-        // gateway error (disallowed bot intents)
         if (error.code === 4014 || error.message?.includes('disallowed intents')) {
-            console.error(`[DISCORD] Your bot has disallowed intents! Switch on "Message Content Intent" under "Bot" in the Discord Developer Portal.`);
+            console.error(`[DISCORD] Disallowed intents! Enable "Message Content Intent" in Discord Developer Portal.`);
             process.exit(1);
         }
 
@@ -81,7 +82,7 @@ export class DiscordManager {
             this.handleError(error);
         });
 
-        // listen for discord -> minecraft messages
+        // Discord -> Minecraft
         this.client.on('messageCreate', async (message) => {
             if (message.author.bot || message.webhookId) return;
 
@@ -96,7 +97,7 @@ export class DiscordManager {
             }
 
             if (channelType) {
-                console.log("[DISCORD] Discord -> Minecraft: " + message.content);
+                console.log(`[DISCORD -> MC] (${channelType}): ${message.content}`);
                 this.bridge.emitDiscordChat({
                     username: message.author.displayName || message.author.username,
                     message: message.content,
@@ -105,7 +106,7 @@ export class DiscordManager {
             }
         });
 
-        // listen for minecraft -> discord messages
+        // Minecraft -> Discord
         this.bridge.on('minecraftChat', async (data: MinecraftChatMessage) => {
             await this.handleMinecraftChat(data);
         });
@@ -115,41 +116,43 @@ export class DiscordManager {
         const { username, message, rank, channel } = data;
 
         // debug channel
-        if (channel === 'debug' ) {
-            const debugChannel = await this.client.channels.fetch(environment.discord.debugChatId || '') as TextChannel;
+        if (channel === 'debug') {
+            if (!environment.discord.debugChatId) return;
+            const debugChannel = await this.client.channels.fetch(environment.discord.debugChatId).catch(() => null);
             if (debugChannel && debugChannel instanceof TextChannel) {
-                debugChannel.send(`${username} [${rank}] >> ${message}`);
+                debugChannel.send(message);
             }
             return;
         }
 
-        // determine target channel ID
-        const targetChannelId = 
-            channel === 'officer'
-                ? process.env.DISCORD_OFFICER_CHAT
-                : process.env.DISCORD_GUILD_CHAT;
+        // select target destination ID & webhook
+        const targetChannelId = channel === 'officer'
+            ? environment.discord.officerChatId
+            : environment.discord.guildChatId;
+
+        const webhook = channel === 'officer' ? this.officerWebhook : this.guildWebhook;
 
         if (!targetChannelId) return;
 
-        // fetch UUID for skin avatar
-        const uuid = await getUUID(username);
+        // fetch avatar skin
+        const uuid = username ? await getUUID(username) : null;
         const avatarURL = uuid
-        ? `https://crafatar.com/avatars/${uuid}?overlay=true`
-        : `https://crafatar.com/avatars/steve?overlay=true`;
+            ? `https://crafatar.com/avatars/${uuid}?overlay=true`
+            : `https://crafatar.com/avatars/steve?overlay=true`;
 
         const formattedUsername = rank && rank.length > 0 ? `[${rank}] ${username}` : username;
 
-        // send message
-        if (this.webhookClient) {
-            this.webhookClient.send({
+        // send via webhook if available, fallback to text channel
+        if (webhook) {
+            await webhook.send({
                 content: message,
-                username: formattedUsername,
+                username: formattedUsername || 'Hypixel Bot',
                 avatarURL
-            });
+            }).catch(console.error);
         } else {
-            const targetChannel = await this.client.channels.fetch(targetChannelId) as TextChannel;
+            const targetChannel = await this.client.channels.fetch(targetChannelId).catch(() => null);
             if (targetChannel && targetChannel instanceof TextChannel) {
-                targetChannel.send(`**${formattedUsername}**: ${message}`);
+                await targetChannel.send(`**${formattedUsername}**: ${message}`).catch(console.error);
             }
         }
     }
@@ -162,13 +165,12 @@ export class DiscordManager {
             if (!guild) return false;
 
             const botMember = await guild.members.fetchMe();
-
             const missingPermissions: string[] = [];
 
             for (const perm of REQUIRED_PERMISSIONS) {
                 if (!botMember.permissions.has(perm)) {
                     const permName = Object.keys(PermissionFlagsBits).find(key => (PermissionFlagsBits as any)[key] === perm);
-                    if (permName) missingPermissions.push(permName || String(perm));
+                    if (permName) missingPermissions.push(permName);
                 }
             }
 

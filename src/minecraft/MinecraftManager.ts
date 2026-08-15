@@ -3,25 +3,21 @@ import path from 'path';
 import type { Bot } from 'mineflayer';
 import { Bridge } from '../bridge/Bridge.js';
 import type { DiscordChatMessage } from '../bridge/Bridge.js';
-
 import config from '../../config.json' with { type: "json" };
-
 import { setTimeout } from 'node:timers/promises';
 
 export class MinecraftManager {
   public bot: Bot | null = null;
-
   private bridge: Bridge;
   private messageQueue: string[] = [];
   private isProcessingQueue = false;
-  private readonly MESSAGE_DELAY_MS = 1200; // 1.2 seconds between messages
+  private readonly MESSAGE_DELAY_MS = 1200;
 
   constructor(bridge: Bridge) {
     this.bridge = bridge;
   }
 
   public send(message: string): void {
-    // sanitise newlines to prevent sending empty or broken packets
     const cleanMessage = message.replace(/[\r\n]+/g, ' ').trim();
     if (!cleanMessage) return;
 
@@ -37,8 +33,8 @@ export class MinecraftManager {
     while (this.messageQueue.length > 0) {
       const message = this.messageQueue.shift();
       if (message && this.bot) {
-        this.send(message);
-        // wait before sending the next packet in queue
+        // Direct Mineflayer execution (prevents recursive queue loop)
+        this.bot.chat(message);
         await setTimeout(this.MESSAGE_DELAY_MS);
       }
     }
@@ -59,96 +55,113 @@ export class MinecraftManager {
     this.registerEvents();
   }
 
-    private registerEvents(): void {
-        if (!this.bot) return;
+  private registerEvents(): void {
+    if (!this.bot) return;
 
-        this.bot.on('login' , () => {
-            console.log(`[MINECRAFT] ${this.bot?.username} joined Hypixel!`);
-        });
+    this.bot.on('login', () => {
+      console.log(`[MINECRAFT] ${this.bot?.username} joined Hypixel!`);
+    });
 
-        this.bot.on('kicked', (extra) => {
-            console.warn(`[MINECRAFT Warning] ${this.bot?.username} was kicked from Hypixel! Extra info: ${extra}`);
-        });
+    this.bot.on('kicked', (extra) => {
+      console.warn(`[MINECRAFT Warning] Kicked: ${extra}`);
+    });
 
-        this.bot.on('end', async (extra) => {
-            console.warn(`[MINECRAFT Warning] ${this.bot?.username} disconnected from Hypixel! Extra info: ${extra}`);
-            const reconnect = config.bot.reconnect;
+    this.bot.on('end', async (extra) => {
+      console.warn(`[MINECRAFT Warning] Disconnected: ${extra}`);
+      const reconnect = config.bot.reconnect;
 
-            if (reconnect) {
-                let reconnectDelay = reconnect.delay;
-                for (let i = 1; i < reconnect.max; i++) {
-                    console.log(`[MINECRAFT] ${this.bot?.username} is reconnecting in ${(reconnectDelay / 1000).toPrecision(2)} seconds... (${i + 1}/${reconnect.max})`);
-                    await setTimeout(reconnectDelay);
-                    this.connect();
-                    reconnectDelay *= 1.3;
-                }
-            }
-        });
-
-        // listen to messages from hypixel
-        this.bot.on('message', (jsonMessage) => {
-            const message = jsonMessage.toString();
-            this.handleChat(message);
-        });
-
-        // listen to messages from discord to send to hypixel
-        this.bridge.on('discordChat', (data: DiscordChatMessage) => {
-            if (!this.bot) return;
-
-            if (data.username === this.bot.username) return;
-
-            if (data.channel === 'guild') {
-                this.send(`/gc ${data.username}: ${data.message}`);
-            } else if (data.channel === 'officer') {
-                this.send(`/oc ${data.username}: ${data.message}`);
-            } else if (data.channel === 'debug') {
-                this.send(`${data.message}`);
-            }
-        });
-    }
-
-    private handleChat(rawmessage: string): void {
-
-        // always send every raw line seen by the bot to the Debug Channel
-        this.bridge.emitMinecraftChat({
-            username: '',
-            message: rawmessage,
-            channel: 'debug',
-        });
-
-        // check if the message is a guild chat message
-        const guildChatRegex = /^Guild > (?:\[(?<rank>[A-Z\+]+)\] )?(?<username>\w+)(?: \[(?<guildRank>\w+)\])?: (?<message>.+)$/;
-        const officerChatRegex = /^Officer > (?:\[(?<rank>[A-Z\+]+)\] )?(?<username>\w+): (?<message>.+)$/;
-        
-        const guildMatch = rawmessage.match(guildChatRegex);
-        const officerMatch = rawmessage.match(officerChatRegex);
-
-        if (guildMatch?.groups) {
-            const { rank, username, message } = guildMatch.groups;
-
-            if (!username || !message) return;
-            if (username.toLowerCase() === this.bot?.username.toLowerCase()) return;
-
-            console.log(`[MINECRAFT] Guild > ${username}: ${message}`);
-            this.bridge.emitMinecraftChat({
-                username: username,
-                message: message,
-                rank: rank || '',
-                channel: 'guild',
-            });
-        } else if (officerMatch?.groups) {
-            const { rank, username, message } = officerMatch.groups;
-
-            if (!username || !message) return;
-            if (username.toLowerCase() === this.bot?.username.toLowerCase()) return;
-
-            console.log(`[MINECRAFT] Officer > ${username}: ${message}`);
-            this.bridge.emitMinecraftChat({
-                username,
-                message,
-                rank: rank || '',
-                channel: 'officer',
-            });
+      if (reconnect) {
+        let reconnectDelay = reconnect.delay;
+        for (let i = 0; i < reconnect.max; i++) {
+          console.log(`[MINECRAFT] Reconnecting in ${(reconnectDelay / 1000).toFixed(1)}s... (${i + 1}/${reconnect.max})`);
+          await setTimeout(reconnectDelay);
+          this.connect();
+          reconnectDelay *= 1.3;
         }
+      }
+    });
+
+    // listen to messages from hypixel
+    this.bot.on('message', (jsonMessage) => {
+        const message = jsonMessage.toString();
+        this.handleChat(message);
+    });
+
+    // listen for incoming discord messages to forward to minecraft
+    this.bridge.on('discordChat', (data: DiscordChatMessage) => {
+      if (!this.bot) return;
+
+      // ignore self-echoes if the message username matches the bot's username
+      if (data.username.toLowerCase() === this.bot.username.toLowerCase()) return;
+
+      if (data.channel === 'guild') {
+        this.send(`/gc ${data.username}: ${data.message}`);
+      } else if (data.channel === 'officer') {
+        this.send(`/oc ${data.username}: ${data.message}`);
+      } else if (data.channel === 'debug') {
+        // Direct command injection from Discord Debug channel
+        this.send(data.message);
+      }
+    });
+  }
+
+  private handleChat(rawmessage: string): void {
+    // emit all raw server text directly to debug
+    this.bridge.emitMinecraftChat({
+      username: '',
+      message: rawmessage,
+      channel: 'debug',
+    });
+
+    if (this.handleChatErrors(rawmessage).success) {
+      console.warn(`[MINECRAFT Warning] ${rawmessage}`);
+      return;
     }
+
+    // regex for guild and officer chats on hypixel
+    const guildChatRegex = /^Guild > (?:\[(?<rank>[A-Z\+]+)\] )?(?<username>\w+)(?: \[(?<guildRank>\w+)\])?: (?<message>.+)$/;
+    const officerChatRegex = /^Officer > (?:\[(?<rank>[A-Z\+]+)\] )?(?<username>\w+): (?<message>.+)$/;
+
+    const guildMatch = rawmessage.match(guildChatRegex);
+    const officerMatch = rawmessage.match(officerChatRegex);
+
+    if (guildMatch?.groups) {
+      const { rank, username, message } = guildMatch.groups;
+      if (!username || !message) return;
+      if (username.toLowerCase() === this.bot?.username.toLowerCase()) return;
+
+      this.bridge.emitMinecraftChat({
+        username,
+        message,
+        rank: rank || '',
+        channel: 'guild',
+      });
+    } else if (officerMatch?.groups) {
+      const { rank, username, message } = officerMatch.groups;
+      if (!username || !message) return;
+      if (username.toLowerCase() === this.bot?.username.toLowerCase()) return;
+
+      this.bridge.emitMinecraftChat({
+        username,
+        message,
+        rank: rank || '',
+        channel: 'officer',
+      });
+    }
+  }
+
+  private handleChatErrors(message: string): { success: boolean; message: string } {
+    const ChatErrors: Record<string, string> = {
+      "Sending packets too fast!": "Sending packets too fast!",
+      "You were spawned in Limbo.": "You were spawned in Limbo!",
+    };
+
+    for (const [key, value] of Object.entries(ChatErrors)) {
+      if (message.includes(key)) {
+        return { success: true, message: value };
+      }
+    }
+
+    return { success: false, message: '' };
+  }
 }
