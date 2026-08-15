@@ -2,7 +2,7 @@ import mineflayer from 'mineflayer';
 import path from 'path';
 import type { Bot } from 'mineflayer';
 import { Bridge } from '../bridge/Bridge.js';
-import type { ChatMessage } from '../bridge/Bridge.js';
+import type { DiscordChatMessage } from '../bridge/Bridge.js';
 
 import config from '../../config.json' with { type: "json" };
 
@@ -92,7 +92,7 @@ export class MinecraftManager {
         });
 
         // listen to messages from discord to send to hypixel
-        this.bridge.on('discordChat', (data: ChatMessage) => {
+        this.bridge.on('discordChat', (data: DiscordChatMessage) => {
             if (!this.bot) return;
 
             if (data.channel === 'guild') {
