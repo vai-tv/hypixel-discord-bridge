@@ -1,4 +1,5 @@
 import mineflayer from 'mineflayer';
+import path from 'path';
 import type { Bot } from 'mineflayer';
 import { Bridge } from '../bridge/Bridge.js';
 import type { ChatMessage } from '../bridge/Bridge.js';
@@ -19,6 +20,7 @@ export class MinecraftManager {
       version: '1.8.9',
       auth: 'microsoft',
       username: this.bot?.username || 'MinecraftBot',
+      profilesFolder: path.join(process.cwd(), '.cache', 'mc-auth')
     });
 
     this.registerEvents();
@@ -28,7 +30,15 @@ export class MinecraftManager {
         if (!this.bot) return;
 
         this.bot.on('spawn' , () => {
-            console.log('[MINECRAFT] Bot spawned on Hypixel!');
+            console.log(`[MINECRAFT] ${this.bot?.username} spawned on Hypixel!`);
+        });
+
+        this.bot.on('kicked', (extra) => {
+            console.log(`[MINECRAFT] ${this.bot?.username} was kicked from Hypixel! Extra info: ${extra}`);
+        });
+
+        this.bot.on('end', () => {
+            console.log(`[MINECRAFT] ${this.bot?.username} disconnected from Hypixel!`);
         });
 
         // listen to messages from hypixel
