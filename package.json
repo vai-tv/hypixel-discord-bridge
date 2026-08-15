@@ -1,0 +1,39 @@
+{
+  "name": "hypixel-discord-bridge",
+  "version": "1.0.0",
+  "description": "connects discord and hypixel",
+  "main": "index.js",
+  "scripts": {
+    "dev": "tsx watch src/Application.ts",
+    "build": "tsc",
+    "start": "node dist/Application.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vai-tv/hypixel-discord-bridge.git"
+  },
+  "keywords": [],
+  "author": "@vai-tv",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/vai-tv/hypixel-discord-bridge/issues"
+  },
+  "homepage": "https://github.com/vai-tv/hypixel-discord-bridge#readme",
+  "dependencies": {
+    "axios": "^1.19.0",
+    "discord.js": "^14.27.0",
+    "dotenv": "^17.4.2",
+    "events": "^3.3.0",
+    "hypixel-api-reborn": "^11.3.7",
+    "mineflayer": "^4.37.1"
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2"
+  }
+}
