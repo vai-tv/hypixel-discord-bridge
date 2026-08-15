@@ -1,9 +1,17 @@
-import { Client, GatewayIntentBits, TextChannel, WebhookClient } from "discord.js";
+import { Client, GatewayIntentBits, PermissionFlagsBits, TextChannel, WebhookClient } from "discord.js";
 import { Bridge } from "../bridge/Bridge.js";
 import type { ChatMessage, ChatChannel } from "../bridge/Bridge.js";
 import { config } from "../config.js";
 
 import { getUUID } from "../api/MojangAPI.js";
+
+const REQUIRED_PERMISSIONS = [
+    PermissionFlagsBits.SendMessages,
+    PermissionFlagsBits.ViewChannel,
+    PermissionFlagsBits.ReadMessageHistory,
+    PermissionFlagsBits.ManageWebhooks,
+    PermissionFlagsBits.EmbedLinks
+];
 
 export class DiscordManager {
     private client: Client;
@@ -25,9 +33,28 @@ export class DiscordManager {
         }
     }
 
-    public async connect(): Promise<void> {
+    public async connect(): Promise<boolean> {
         this.registerEvents();
-        await this.client.login(process.env.DISCORD_TOKEN);
+
+        try {
+            await this.client.login(config.discord.token);
+
+            await new Promise<void>((resolve) => this.client.once('ready', () => resolve()));
+            await this.verifyPermissions();
+
+            return true;
+        } catch (error: any) {
+            this.handleError(error);
+            return false;
+        }
+    }
+
+    private handleError(error: any): void {
+        // gateway error (disallowed bot intents)
+        if (error.code === 4014 || error.message?.includes('disallowed intents')) {
+            console.error(`[DISCORD] Your bot has disallowed intents! Switch on "Message Content Intent" under "Bot" in the Discord Developer Portal.`);
+            process.exit(1);
+        }
     }
 
     private registerEvents(): void {
@@ -52,11 +79,11 @@ export class DiscordManager {
 
             let channelType: ChatChannel | null = null;
 
-            if (message.channelId === process.env.DISCORD_GUILD_CHAT) {
+            if (message.channelId === config.discord.guildChatId) {
                 channelType = 'guild';
-            } else if (message.channelId === process.env.DISCORD_OFFICER_CHAT) {
+            } else if (message.channelId === config.discord.officerChatId) {
                 channelType = 'officer';
-            } else if (message.channelId === process.env.DISCORD_DEBUG_CHAT) {
+            } else if (message.channelId === config.discord.debugChatId) {
                 channelType = 'debug';
             }
 
@@ -115,6 +142,43 @@ export class DiscordManager {
             if (targetChannel && targetChannel instanceof TextChannel) {
                 targetChannel.send(`**[${formattedUsername}]** ${message}`);
             }
+        }
+    }
+
+    private async verifyPermissions(): Promise<boolean> {
+        if (!config.discord.guildServerId) return true;
+
+        try {
+            const guild = await this.client.guilds.fetch(config.discord.guildServerId);
+            if (!guild) return false;
+
+            const botMember = await guild.members.fetchMe();
+
+            const missingPermissions: string[] = [];
+
+            for (const perm of REQUIRED_PERMISSIONS) {
+                if (!botMember.permissions.has(perm)) {
+                    const permName = Object.keys(PermissionFlagsBits).find(key => (PermissionFlagsBits as any)[key] === perm);
+                    if (permName) missingPermissions.push(permName || String(perm));
+                }
+            }
+
+            if (missingPermissions.length > 0) {
+                console.error('\n⚠️ [DISCORD Warning] MISSING REQUIRED BOT PERMISSIONS');
+                console.error('─────────────────────────────────────────────────────────────');
+                console.error(`The bot is missing the following permissions in "${guild.name}":`);
+                missingPermissions.forEach((p) => console.error(` - ${p}`));
+                console.error('\nSome features (like webhooks or reading chat) may fail.');
+                console.error('You can use (this link)[https://discord.com/oauth2/authorize?client_id=1538229284512997558&permissions=536988672&integration_type=0&scope=bot] to add the bot to your server.');
+                console.error('─────────────────────────────────────────────────────────────\n');
+                return false;
+            }
+
+            console.log(`[DISCORD] Permissions verified successfully in "${guild.name}".`);
+            return true;
+            } catch (error) {
+            console.warn('[DISCORD Warning] Could not verify permissions on startup:', error);
+            return true;
         }
     }
 }
