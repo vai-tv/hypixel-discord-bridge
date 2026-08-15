@@ -55,6 +55,8 @@ export class DiscordManager {
             console.error(`[DISCORD] Your bot has disallowed intents! Switch on "Message Content Intent" under "Bot" in the Discord Developer Portal.`);
             process.exit(1);
         }
+
+        console.error(`[DISCORD] Error: ${error}`);
     }
 
     private registerEvents(): void {
@@ -71,7 +73,11 @@ export class DiscordManager {
                 console.warn(`[DISCORD] Could not get guild with ID ${config.discord.guildServerId}`);
                 }
             }
-            });
+        });
+
+        this.client.on('error', (error) => {
+            this.handleError(error);
+        });
 
         // listen for discord -> minecraft messages
         this.client.on('messageCreate', async (message) => {
@@ -174,7 +180,7 @@ export class DiscordManager {
                 return false;
             }
 
-            console.log(`[DISCORD] Permissions verified successfully in "${guild.name}".`);
+            console.log(`[DISCORD] Permissions okay.`);
             return true;
             } catch (error) {
             console.warn('[DISCORD Warning] Could not verify permissions on startup:', error);
