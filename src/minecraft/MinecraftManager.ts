@@ -52,7 +52,7 @@ export class MinecraftManager {
       port: 25565,
       version: '1.8.9',
       auth: 'microsoft',
-      username: this.bot?.username || 'MinecraftBot',
+      username: config.bot.username,
       profilesFolder: path.join(process.cwd(), '.cache', 'mc-auth')
     });
 
@@ -94,6 +94,8 @@ export class MinecraftManager {
         // listen to messages from discord to send to hypixel
         this.bridge.on('discordChat', (data: DiscordChatMessage) => {
             if (!this.bot) return;
+
+            if (data.username === this.bot.username) return;
 
             if (data.channel === 'guild') {
                 this.send(`/gc ${data.username}: ${data.message}`);
