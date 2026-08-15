@@ -15,7 +15,7 @@ function isValidWebhookUrl(url: string): boolean {
 
 const rawWebhookUrl = getEnvVar('DISCORD_WEBHOOK_URL', false);
 
-export const config = {
+export const environment = {
   discord: {
     token: getEnvVar('DISCORD_TOKEN'),
     guildServerId: getEnvVar('DISCORD_SERVER_ID', false),
@@ -29,6 +29,6 @@ export const config = {
   },
 };
 
-if (!config.discord.webhookUrl && rawWebhookUrl) {
+if (!environment.discord.webhookUrl && rawWebhookUrl) {
   console.warn('[Config Warning] DISCORD_WEBHOOK_URL is invalid. Webhook features will fallback to text channel messages.');
 }
