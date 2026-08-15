@@ -1,5 +1,12 @@
 {
     "bot" : {
-        "prefix" : "?"
+        "prefix" : "?",
+        "useWebhooks" : false,
+        "reconnect" :
+            {
+                "enabled" : true,
+                "delay" : 10000,
+                "max" : 3
+            }
     }
 }
