@@ -33,9 +33,18 @@ export class DiscordManager {
     private registerEvents(): void {
         if (!this.client) return;
 
-        this.client.on('ready', () => {
-            console.log('[DISCORD] Bot is ready!');
-        });
+        this.client.on('ready', async () => {
+            console.log(`[DISCORD] Logged in as ${this.client.user?.tag}!`);
+
+            if (config.discord.guildServerId) {
+                const guild = await this.client.guilds.fetch(config.discord.guildServerId).catch(() => null);
+                if (guild) {
+                console.log(`[DISCORD] Successfully found guild ${guild.name} (${guild.id})`);
+                } else {
+                console.warn(`[DISCORD] Could not get guild with ID ${config.discord.guildServerId}`);
+                }
+            }
+            });
 
         // listen for discord -> minecraft messages
         this.client.on('messageCreate', async (message) => {
