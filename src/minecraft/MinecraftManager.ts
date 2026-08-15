@@ -86,13 +86,13 @@ export class MinecraftManager {
       }
     });
 
-    // listen to messages from hypixel
+    // Minecraft -> Discord
     this.bot.on('message', (jsonMessage) => {
         const message = jsonMessage.toString();
         this.chatHandler.handleChat(message);
     });
 
-    // listen for incoming discord messages to forward to minecraft
+    // Discord -> Minecraft
     this.bridge.on('discordChat', (data: DiscordChatMessage) => {
       if (!this.bot) return;
 
