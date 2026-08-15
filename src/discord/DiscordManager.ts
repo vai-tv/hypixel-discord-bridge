@@ -108,6 +108,9 @@ export class DiscordManager {
 
         // Minecraft -> Discord
         this.bridge.on('minecraftChat', async (data: MinecraftChatMessage) => {
+            if (data.channel !== 'debug') {
+                console.log(`[MC -> DISCORD] (${data.channel}): ${data.message}`);
+            }
             await this.handleMinecraftChat(data);
         });
     }
@@ -115,12 +118,18 @@ export class DiscordManager {
     private async handleMinecraftChat(data: MinecraftChatMessage): Promise<void> {
         const { username, message, rank, channel } = data;
 
+        const cleanMessage = message
+            .replace(/§[0-9a-fk-or]/gi, '')
+            .replace(/\u00A0/g, ' ')
+            .trim();
+        if (!cleanMessage) return;
+
         // debug channel
         if (channel === 'debug') {
             if (!environment.discord.debugChatId) return;
             const debugChannel = await this.client.channels.fetch(environment.discord.debugChatId).catch(() => null);
             if (debugChannel && debugChannel instanceof TextChannel) {
-                debugChannel.send(message);
+                debugChannel.send(cleanMessage);
             }
             return;
         }
@@ -143,16 +152,16 @@ export class DiscordManager {
         const formattedUsername = rank && rank.length > 0 ? `[${rank}] ${username}` : username;
 
         // send via webhook if available, fallback to text channel
-        if (webhook) {
+        if (config.bot.useWebhooks && webhook) {
             await webhook.send({
-                content: message,
+                content: cleanMessage,
                 username: formattedUsername || 'Hypixel Bot',
                 avatarURL
             }).catch(console.error);
         } else {
             const targetChannel = await this.client.channels.fetch(targetChannelId).catch(() => null);
             if (targetChannel && targetChannel instanceof TextChannel) {
-                await targetChannel.send(`**${formattedUsername}**: ${message}`).catch(console.error);
+                await targetChannel.send(`**${formattedUsername}**: ${cleanMessage}`).catch(console.error);
             }
         }
     }
