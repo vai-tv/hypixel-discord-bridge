@@ -25,8 +25,6 @@ export const config = {
     webhookUrl: isValidWebhookUrl(rawWebhookUrl) ? rawWebhookUrl : null,
   },
   minecraft: {
-    email: getEnvVar('MC_EMAIL'),
-    auth: (getEnvVar('MC_AUTH', false) || 'microsoft') as 'microsoft',
     hypixelApiKey: getEnvVar('HYPIXEL_API_KEY', false),
   },
 };
