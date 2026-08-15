@@ -3,7 +3,10 @@ import path from 'path';
 import type { Bot } from 'mineflayer';
 import { Bridge } from '../bridge/Bridge.js';
 import type { DiscordChatMessage } from '../bridge/Bridge.js';
+import { ChatHandler } from './ChatHandler.js';
+
 import config from '../../config.json' with { type: "json" };
+
 import { setTimeout } from 'node:timers/promises';
 
 export class MinecraftManager {
@@ -12,9 +15,11 @@ export class MinecraftManager {
   private messageQueue: string[] = [];
   private isProcessingQueue = false;
   private readonly MESSAGE_DELAY_MS = 1200;
+  private chatHandler: ChatHandler;
 
   constructor(bridge: Bridge) {
     this.bridge = bridge;
+    this.chatHandler = new ChatHandler(bridge, () => this.bot?.username);
   }
 
   public send(message: string): void {
@@ -84,7 +89,7 @@ export class MinecraftManager {
     // listen to messages from hypixel
     this.bot.on('message', (jsonMessage) => {
         const message = jsonMessage.toString();
-        this.handleChat(message);
+        this.chatHandler.handleChat(message);
     });
 
     // listen for incoming discord messages to forward to minecraft
@@ -103,65 +108,5 @@ export class MinecraftManager {
         this.send(data.message);
       }
     });
-  }
-
-  private handleChat(rawmessage: string): void {
-    // emit all raw server text directly to debug
-    this.bridge.emitMinecraftChat({
-      username: '',
-      message: rawmessage,
-      channel: 'debug',
-    });
-
-    if (this.handleChatErrors(rawmessage).success) {
-      console.warn(`[MINECRAFT Warning] ${rawmessage}`);
-      return;
-    }
-
-    // regex for guild and officer chats on hypixel
-    const guildChatRegex = /^Guild > (?:\[(?<rank>[A-Z\+]+)\] )?(?<username>\w+)(?: \[(?<guildRank>\w+)\])?: (?<message>.+)$/;
-    const officerChatRegex = /^Officer > (?:\[(?<rank>[A-Z\+]+)\] )?(?<username>\w+): (?<message>.+)$/;
-
-    const guildMatch = rawmessage.match(guildChatRegex);
-    const officerMatch = rawmessage.match(officerChatRegex);
-
-    if (guildMatch?.groups) {
-      const { rank, username, message } = guildMatch.groups;
-      if (!username || !message) return;
-      if (username.toLowerCase() === this.bot?.username.toLowerCase()) return;
-
-      this.bridge.emitMinecraftChat({
-        username,
-        message,
-        rank: rank || '',
-        channel: 'guild',
-      });
-    } else if (officerMatch?.groups) {
-      const { rank, username, message } = officerMatch.groups;
-      if (!username || !message) return;
-      if (username.toLowerCase() === this.bot?.username.toLowerCase()) return;
-
-      this.bridge.emitMinecraftChat({
-        username,
-        message,
-        rank: rank || '',
-        channel: 'officer',
-      });
-    }
-  }
-
-  private handleChatErrors(message: string): { success: boolean; message: string } {
-    const ChatErrors: Record<string, string> = {
-      "Sending packets too fast!": "Sending packets too fast!",
-      "You were spawned in Limbo.": "You were spawned in Limbo!",
-    };
-
-    for (const [key, value] of Object.entries(ChatErrors)) {
-      if (message.includes(key)) {
-        return { success: true, message: value };
-      }
-    }
-
-    return { success: false, message: '' };
   }
 }
