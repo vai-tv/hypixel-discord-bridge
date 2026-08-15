@@ -4,7 +4,8 @@ import { Bridge } from '../bridge/Bridge.js';
 import type { ChatMessage } from '../bridge/Bridge.js';
 
 export class MinecraftManager {
-  private bot: Bot | null = null;
+  public bot: Bot | null = null;
+
   private bridge: Bridge;
 
   constructor(bridge: Bridge) {
@@ -16,8 +17,8 @@ export class MinecraftManager {
       host: 'mc.hypixel.net',
       port: 25565,
       version: '1.8.9',
-      auth: (process.env.MC_AUTH as 'microsoft') || 'microsoft',
-      username: process.env.MC_EMAIL || ''
+      auth: 'microsoft',
+      username: this.bot?.username || 'MinecraftBot',
     });
 
     this.registerEvents();
