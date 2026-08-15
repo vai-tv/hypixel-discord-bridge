@@ -13,7 +13,8 @@ function isValidWebhookUrl(url: string): boolean {
   return /^https:\/\/(ptb\.|canary\.)?discord\.com\/api\/webhooks\/\d+\/[\w-]+$/.test(url);
 }
 
-const rawWebhookUrl = getEnvVar('DISCORD_WEBHOOK_URL', false);
+const rawGuildWebhookUrl = getEnvVar('DISCORD_GUILD_WEBHOOK_URL', false);
+const rawOfficerWebhookUrl = getEnvVar('DISCORD_OFFICER_WEBHOOK_URL', false);
 
 export const environment = {
   discord: {
@@ -22,13 +23,17 @@ export const environment = {
     guildChatId: getEnvVar('DISCORD_GUILD_CHAT', false),
     officerChatId: getEnvVar('DISCORD_OFFICER_CHAT', false),
     debugChatId: getEnvVar('DISCORD_DEBUG_CHAT', false),
-    webhookUrl: isValidWebhookUrl(rawWebhookUrl) ? rawWebhookUrl : null,
+    guildWebhookUrl: isValidWebhookUrl(rawGuildWebhookUrl) ? rawGuildWebhookUrl : null,
+    officerWebhookUrl: isValidWebhookUrl(rawOfficerWebhookUrl) ? rawOfficerWebhookUrl : null,
   },
   minecraft: {
     hypixelApiKey: getEnvVar('HYPIXEL_API_KEY', false),
   },
 };
 
-if (!environment.discord.webhookUrl && rawWebhookUrl) {
-  console.warn('[Config Warning] DISCORD_WEBHOOK_URL is invalid. Webhook features will fallback to text channel messages.');
+if (!environment.discord.guildWebhookUrl) {
+  console.warn('[DISCORD Warning] Missing or invalid Discord guild webhook URL. Webhooks will not be used.');
+}
+if (!environment.discord.officerWebhookUrl) {
+  console.warn('[DISCORD Warning] Missing or invalid Discord officer webhook URL. Webhooks will not be used.');
 }
