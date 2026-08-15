@@ -29,8 +29,8 @@ export class MinecraftManager {
     private registerEvents(): void {
         if (!this.bot) return;
 
-        this.bot.on('spawn' , () => {
-            console.log(`[MINECRAFT] ${this.bot?.username} spawned on Hypixel!`);
+        this.bot.on('login' , () => {
+            console.log(`[MINECRAFT] ${this.bot?.username} joined Hypixel!`);
         });
 
         this.bot.on('kicked', (extra) => {
@@ -65,7 +65,7 @@ export class MinecraftManager {
 
         // always send every raw line seen by the bot to the Debug Channel
         this.bridge.emitMinecraftChat({
-            username: 'SYSTEM',
+            username: 'MinecraftBot',
             message: rawmessage,
             channel: 'debug',
         });

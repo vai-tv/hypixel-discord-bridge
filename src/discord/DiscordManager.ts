@@ -1,7 +1,7 @@
 import { Client, GatewayIntentBits, PermissionFlagsBits, TextChannel, WebhookClient } from "discord.js";
 import { Bridge } from "../bridge/Bridge.js";
 import type { ChatMessage, ChatChannel } from "../bridge/Bridge.js";
-import { config } from "../config.js";
+import { environment } from "../EnvHandler.js";
 
 import { getUUID } from "../api/MojangAPI.js";
 
@@ -28,8 +28,10 @@ export class DiscordManager {
             ]
         });
 
-        if (config.discord.webhookUrl) {
-            this.webhookClient = new WebhookClient({ url: config.discord.webhookUrl });
+        if (environment.discord.webhookUrl && environment.discord.webhookUrl.trim() !== '') {
+            this.webhookClient = new WebhookClient({ url: environment.discord.webhookUrl });
+        } else { 
+            this.webhookClient = null;
         }
     }
 
@@ -37,7 +39,7 @@ export class DiscordManager {
         this.registerEvents();
 
         try {
-            await this.client.login(config.discord.token);
+            await this.client.login(environment.discord.token);
 
             await new Promise<void>((resolve) => this.client.once('ready', () => resolve()));
             await this.verifyPermissions();
@@ -65,12 +67,12 @@ export class DiscordManager {
         this.client.on('ready', async () => {
             console.log(`[DISCORD] Logged in as ${this.client.user?.tag}!`);
 
-            if (config.discord.guildServerId) {
-                const guild = await this.client.guilds.fetch(config.discord.guildServerId).catch(() => null);
+            if (environment.discord.guildServerId) {
+                const guild = await this.client.guilds.fetch(environment.discord.guildServerId).catch(() => null);
                 if (guild) {
                 console.log(`[DISCORD] Successfully found guild ${guild.name} (${guild.id})`);
                 } else {
-                console.warn(`[DISCORD] Could not get guild with ID ${config.discord.guildServerId}`);
+                console.warn(`[DISCORD] Could not get guild with ID ${environment.discord.guildServerId}`);
                 }
             }
         });
@@ -85,11 +87,11 @@ export class DiscordManager {
 
             let channelType: ChatChannel | null = null;
 
-            if (message.channelId === config.discord.guildChatId) {
+            if (message.channelId === environment.discord.guildChatId) {
                 channelType = 'guild';
-            } else if (message.channelId === config.discord.officerChatId) {
+            } else if (message.channelId === environment.discord.officerChatId) {
                 channelType = 'officer';
-            } else if (message.channelId === config.discord.debugChatId) {
+            } else if (message.channelId === environment.discord.debugChatId) {
                 channelType = 'debug';
             }
 
@@ -113,9 +115,9 @@ export class DiscordManager {
 
         // debug channel
         if (channel === 'debug' ) {
-            const debugChannel = await this.client.channels.fetch(process.env.DISCORD_DEBUG_CHAT || '') as TextChannel;
+            const debugChannel = await this.client.channels.fetch(environment.discord.debugChatId || '') as TextChannel;
             if (debugChannel && debugChannel instanceof TextChannel) {
-                debugChannel.send(`[DEBUG] ${username}: ${message}`);
+                debugChannel.send(`${username}: ${message}`);
             }
             return;
         }
@@ -134,7 +136,7 @@ export class DiscordManager {
         ? `https://crafatar.com/avatars/${uuid}?overlay=true`
         : `https://crafatar.com/avatars/steve?overlay=true`;
 
-        const formattedUsername = rank && rank.length > 0 ? `${rank} ${username}` : username;
+        const formattedUsername = rank && rank.length > 0 ? `[${rank}] ${username}` : username;
 
         // send message
         if (this.webhookClient) {
@@ -146,16 +148,16 @@ export class DiscordManager {
         } else {
             const targetChannel = await this.client.channels.fetch(targetChannelId) as TextChannel;
             if (targetChannel && targetChannel instanceof TextChannel) {
-                targetChannel.send(`**[${formattedUsername}]** ${message}`);
+                targetChannel.send(`**${formattedUsername}**: ${message}`);
             }
         }
     }
 
     private async verifyPermissions(): Promise<boolean> {
-        if (!config.discord.guildServerId) return true;
+        if (!environment.discord.guildServerId) return true;
 
         try {
-            const guild = await this.client.guilds.fetch(config.discord.guildServerId);
+            const guild = await this.client.guilds.fetch(environment.discord.guildServerId);
             if (!guild) return false;
 
             const botMember = await guild.members.fetchMe();
