@@ -111,7 +111,7 @@ export class MinecraftManager {
 
         // always send every raw line seen by the bot to the Debug Channel
         this.bridge.emitMinecraftChat({
-            username: 'MinecraftBot',
+            username: '',
             message: rawmessage,
             channel: 'debug',
         });
@@ -129,6 +129,7 @@ export class MinecraftManager {
             if (!username || !message) return;
             if (username.toLowerCase() === this.bot?.username.toLowerCase()) return;
 
+            console.log(`[MINECRAFT] Guild > ${username}: ${message}`);
             this.bridge.emitMinecraftChat({
                 username: username,
                 message: message,
@@ -141,6 +142,7 @@ export class MinecraftManager {
             if (!username || !message) return;
             if (username.toLowerCase() === this.bot?.username.toLowerCase()) return;
 
+            console.log(`[MINECRAFT] Officer > ${username}: ${message}`);
             this.bridge.emitMinecraftChat({
                 username,
                 message,

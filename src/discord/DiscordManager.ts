@@ -96,6 +96,7 @@ export class DiscordManager {
             }
 
             if (channelType) {
+                console.log("[DISCORD] Discord -> Minecraft: " + message.content);
                 this.bridge.emitDiscordChat({
                     username: message.author.displayName || message.author.username,
                     message: message.content,
