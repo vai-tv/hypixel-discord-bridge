@@ -1,6 +1,6 @@
 import { Client, GatewayIntentBits, PermissionFlagsBits, TextChannel, WebhookClient } from "discord.js";
 import { Bridge } from "../bridge/Bridge.js";
-import type { ChatMessage, ChatChannel } from "../bridge/Bridge.js";
+import type { MinecraftChatMessage, ChatChannel } from "../bridge/Bridge.js";
 import { environment } from "../EnvHandler.js";
 
 import { getUUID } from "../api/MojangAPI.js";
@@ -105,19 +105,19 @@ export class DiscordManager {
         });
 
         // listen for minecraft -> discord messages
-        this.bridge.on('minecraftChat', async (data: ChatMessage) => {
+        this.bridge.on('minecraftChat', async (data: MinecraftChatMessage) => {
             await this.handleMinecraftChat(data);
         });
     }
 
-    private async handleMinecraftChat(data: ChatMessage): Promise<void> {
+    private async handleMinecraftChat(data: MinecraftChatMessage): Promise<void> {
         const { username, message, rank, channel } = data;
 
         // debug channel
         if (channel === 'debug' ) {
             const debugChannel = await this.client.channels.fetch(environment.discord.debugChatId || '') as TextChannel;
             if (debugChannel && debugChannel instanceof TextChannel) {
-                debugChannel.send(`${username}: ${message}`);
+                debugChannel.send(`${username} [${rank}] >> ${message}`);
             }
             return;
         }
