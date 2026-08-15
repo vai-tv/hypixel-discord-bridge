@@ -4,6 +4,10 @@ import type { Bot } from 'mineflayer';
 import { Bridge } from '../bridge/Bridge.js';
 import type { ChatMessage } from '../bridge/Bridge.js';
 
+import config from '../../config.json' with { type: "json" };
+
+import { setTimeout } from 'node:timers/promises';
+
 export class MinecraftManager {
   public bot: Bot | null = null;
 
@@ -34,11 +38,22 @@ export class MinecraftManager {
         });
 
         this.bot.on('kicked', (extra) => {
-            console.log(`[MINECRAFT] ${this.bot?.username} was kicked from Hypixel! Extra info: ${extra}`);
+            console.warn(`[MINECRAFT Warning] ${this.bot?.username} was kicked from Hypixel! Extra info: ${extra}`);
         });
 
-        this.bot.on('end', () => {
-            console.log(`[MINECRAFT] ${this.bot?.username} disconnected from Hypixel!`);
+        this.bot.on('end', async (extra) => {
+            console.warn(`[MINECRAFT Warning] ${this.bot?.username} disconnected from Hypixel! Extra info: ${extra}`);
+            const reconnect = config.bot.reconnect;
+
+            if (reconnect) {
+                let reconnectDelay = reconnect.delay;
+                for (let i = 1; i < reconnect.max; i++) {
+                    console.log(`[MINECRAFT] ${this.bot?.username} is reconnecting in ${(reconnectDelay / 1000).toPrecision(2)} seconds... (${i + 1}/${reconnect.max})`);
+                    await setTimeout(reconnectDelay);
+                    this.connect();
+                    reconnectDelay *= 1.3;
+                }
+            }
         });
 
         // listen to messages from hypixel
