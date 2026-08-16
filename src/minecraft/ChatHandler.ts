@@ -45,41 +45,41 @@ export class ChatHandler {
         // guild chat
         const guildMatch = cleanMessage.match(ChatHandler.GUILD_CHAT_REGEX);
         if (guildMatch?.groups) {
-          const { rank, username, message } = guildMatch.groups;
-          if (!username || !message) return;
-          if (username.toLowerCase() === currentBotUsername) return;
+            const { rank, username, message } = guildMatch.groups;
+            if (!username || !message) return;
+            if (username.toLowerCase() === currentBotUsername) return;
 
-          this.bridge.emitMinecraftChat({
-            username,
-            message,
-            rank: rank || '',
-            channel: 'guild',
-          });
-          return;
+            this.bridge.emitMinecraftChat({
+                username,
+                message,
+                rank: rank || '',
+                channel: 'guild',
+            });
+            return;
         }
 
         // officer chat
         const officerMatch = cleanMessage.match(ChatHandler.OFFICER_CHAT_REGEX);
         if (officerMatch?.groups) {
-          const { rank, username, message } = officerMatch.groups;
-          if (!username || !message) return;
-          if (username.toLowerCase() === currentBotUsername) return;
+            const { rank, username, message } = officerMatch.groups;
+            if (!username || !message) return;
+            if (username.toLowerCase() === currentBotUsername) return;
 
-          this.bridge.emitMinecraftChat({
-            username,
-            message,
-            rank: rank || '',
-            channel: 'officer',
-          });
-        }
-      }
-
-        private handleChatErrors(message: string): { success: boolean; message: string } {
-            for (const [key, value] of Object.entries(ChatHandler.CHAT_ERRORS)) {
-                if (message.includes(key)) {
-                    return { success: true, message: value };
-                }
-            }
-            return { success: false, message: '' };
+            this.bridge.emitMinecraftChat({
+                username,
+                message,
+                rank: rank || '',
+                channel: 'officer',
+            });
         }
     }
+
+    private handleChatErrors(message: string): { success: boolean; message: string } {
+        for (const [key, value] of Object.entries(ChatHandler.CHAT_ERRORS)) {
+            if (message.includes(key)) {
+                return { success: true, message: value };
+            }
+        }
+        return { success: false, message: '' };
+    }
+}
