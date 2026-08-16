@@ -13,6 +13,7 @@ export class ChatHandler {
   private static readonly CHAT_ERRORS: Record<string, string> = {
     "Sending packets too fast!": "Sending packets too fast!",
     "You were spawned in Limbo.": "You were spawned in Limbo!",
+    "You are AFK.": "You were timed out in Limbo for being AFK!",
   };
 
   constructor(bridge: Bridge, getBotUsername: () => string | undefined) {
