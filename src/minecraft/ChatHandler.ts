@@ -25,7 +25,6 @@ export class ChatHandler {
     }
 
     public async handleChat(rawMessage: string): Promise<void> {
-        // strip Minecraft section symbol color/formatting codes and whitespace
         const cleanMessage = rawMessage.replace(/§[0-9a-fk-or]/gi, '').trim();
         if (!cleanMessage) return;
 
@@ -45,15 +44,15 @@ export class ChatHandler {
 
         const currentBotUsername = this.botUsernameGetter()?.toLowerCase();
 
-        // guild chat
         const guildMatch = cleanMessage.match(ChatHandler.GUILD_CHAT_REGEX);
         if (guildMatch?.groups) {
             const { rank, username, message } = guildMatch.groups;
             if (!username || !message) return;
-            if (username.toLowerCase() === currentBotUsername) return;
 
-            // check if it's a command
-            const isCommand = await this.commandHandler.handleMessage(username, message, 'guild');
+            const isBot = username.toLowerCase() === currentBotUsername;
+            if (isBot) return;
+
+            await this.commandHandler.handleMessage(username, message, 'guild');
 
             this.bridge.emitMinecraftChat({
                 username,
@@ -64,12 +63,15 @@ export class ChatHandler {
             return;
         }
 
-        // officer chat
         const officerMatch = cleanMessage.match(ChatHandler.OFFICER_CHAT_REGEX);
         if (officerMatch?.groups) {
             const { rank, username, message } = officerMatch.groups;
             if (!username || !message) return;
-            if (username.toLowerCase() === currentBotUsername) return;
+
+            const isBot = username.toLowerCase() === currentBotUsername;
+            if (isBot) return;
+            
+            await this.commandHandler.handleMessage(username, message, 'officer');
 
             this.bridge.emitMinecraftChat({
                 username,
