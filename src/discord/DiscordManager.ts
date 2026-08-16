@@ -119,7 +119,6 @@ export class DiscordManager {
 
                 this.bridge.on('discordChatAck', ackHandler);
 
-                console.log(`[DISCORD -> MC] (${channelType}): ${message.content}`);
                 this.bridge.emitDiscordChat({
                     id: messageId,
                     username: message.author.displayName || message.author.username,
@@ -131,9 +130,6 @@ export class DiscordManager {
 
         // Minecraft -> Discord
         this.bridge.on('minecraftChat', async (message: MinecraftChatMessage) => {
-            if (message.channel !== 'debug') {
-                console.log(`[MC -> DISCORD ${message.channel}] (${message.username}): ${message.message}`);
-            }
             await this.handleMinecraftChat(message);
         });
     }
