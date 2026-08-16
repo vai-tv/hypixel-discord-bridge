@@ -1,0 +1,20 @@
+{
+    "logs" : {
+        "event" : {
+            "login" : "[MINECRAFT] {username} joined Hypixel!",
+            "kicked" : "[MINECRAFT Warning] Kicked: {extra}",
+            "end" : "[MINECRAFT Warning] Disconnected: {extra}",
+            "reconnect" : "[MINECRAFT] Reconnecting in {time}s..."
+        },
+        "chat" : {
+            "discordemit" : "[DISCORD -> MINECRAFT {channel}] {username}: {message}",
+            "minecraftemit" : "[MINECRAFT -> DISCORD {channel}] {username}: {message}"
+        },
+        "discord" : {
+            "startup" : {
+                "guildfound" : "[DISCORD] Successfully found guild {name} ({id})",
+                "guildnotfound" : "[DISCORD] Could not get guild with ID {id}"
+            }
+        }
+    }
+}
