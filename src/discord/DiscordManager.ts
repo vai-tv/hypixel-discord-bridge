@@ -4,7 +4,6 @@ import type { MinecraftChatMessage, ChatChannel } from "../bridge/Bridge.js";
 import { environment } from "../EnvHandler.js";
 import config from '../../config.json' with { type: "json" };
 import { getUUID } from "../api/MojangAPI.js";
-import { escape } from "node:querystring";
 
 const REQUIRED_PERMISSIONS = [
     PermissionFlagsBits.SendMessages,
