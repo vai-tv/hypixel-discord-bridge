@@ -1,6 +1,10 @@
 import mineflayer from 'mineflayer';
 import path from 'path';
 import type { Bot } from 'mineflayer';
+
+import { HypixelAPI } from '../api/HypixelAPI.js';
+import { MinecraftCommandHandler } from './CommandHandler.js';
+
 import { Bridge } from '../bridge/Bridge.js';
 import type { DiscordChatMessage } from '../bridge/Bridge.js';
 import { ChatHandler } from './ChatHandler.js';
@@ -13,22 +17,33 @@ import { setTimeout } from 'node:timers/promises';
 export class MinecraftManager {
     public bot: Bot | null = null;
     private bridge: Bridge;
+    private chatHandler: ChatHandler;
+
+    private hypixelApi: HypixelAPI;
+    private commandHandler: MinecraftCommandHandler;
+
+
     private messageQueue: string[] = [];
     private isProcessingQueue = false;
     private readonly MESSAGE_DELAY_MS = 1200;
-    private chatHandler: ChatHandler;
 
     constructor(bridge: Bridge) {
         this.bridge = bridge;
-        this.chatHandler = new ChatHandler(bridge, () => this.bot?.username);
+        
+        this.hypixelApi = new HypixelAPI();
+        this.commandHandler = new MinecraftCommandHandler(
+            (message) => this.send(message), 
+            this.hypixelApi
+        );
+        this.chatHandler = new ChatHandler(bridge, this.commandHandler, () => this.bot?.username);
     }
 
     public send(message: string): void {
-      const cleanMessage = message.replace(/[\r\n]+/g, ' ').trim();
-      if (!cleanMessage) return;
+        const cleanMessage = message.replace(/[\r\n]+/g, ' ').trim();
+        if (!cleanMessage) return;
 
-      this.messageQueue.push(cleanMessage);
-      this.processQueue();
+        this.messageQueue.push(cleanMessage);
+        this.processQueue();
     }
 
     private async processQueue(): Promise<void> {
@@ -48,7 +63,9 @@ export class MinecraftManager {
         this.isProcessingQueue = false;
     }
 
-    public connect(): void {
+    public async connect(): Promise<void> {
+        await this.commandHandler.loadCommands();
+
         this.bot = mineflayer.createBot({
             host: 'mc.hypixel.net',
             port: 25565,
@@ -92,7 +109,7 @@ export class MinecraftManager {
         });
 
         // Minecraft -> Discord
-        this.bot.on('message', (jsonMessage) => {
+        this.bot.on('message', async (jsonMessage) => {
             const message = jsonMessage.toString();
             this.chatHandler.handleChat(message);
         });
