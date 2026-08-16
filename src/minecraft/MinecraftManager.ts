@@ -75,14 +75,17 @@ export class MinecraftManager {
             console.warn(`[MINECRAFT Warning] Disconnected: ${extra}`);
             const reconnect = config.bot.reconnect;
 
+            // clean up listeners
+            if (this.bot) {
+                this.bot.removeAllListeners();
+                this.bot = null;
+            }
+
             if (reconnect) {
-                let reconnectDelay = reconnect.delay;
-                for (let i = 0; i < reconnect.max; i++) {
-                    console.log(`[MINECRAFT] Reconnecting in ${(reconnectDelay / 1000).toFixed(1)}s... (${i + 1}/${reconnect.max})`);
-                    await setTimeout(reconnectDelay);
-                    this.connect();
-                    reconnectDelay *= 1.3;
-                }
+                console.log(`[MINECRAFT] Reconnecting in ${(reconnect.delay / 1000).toFixed(1)}s...`);
+                await setTimeout(reconnect.delay);
+                this.connect();
+                reconnect.delay *= 1.3;
             }
         });
 
