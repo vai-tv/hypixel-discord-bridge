@@ -8,7 +8,7 @@ export class ChatHandler {
     /^Guild > (?:\[(?<rank>[A-Z\+]+)\] )?(?<username>\w+)(?: \[(?<guildRank>\w+)\])?: (?<message>.+)$/;
 
   private static readonly OFFICER_CHAT_REGEX =
-    /^Officer > (?:\[(?<rank>[A-Z\+]+)\] )?(?<username>\w+): (?<message>.+)$/;
+    /^Officer > (?:\[(?<rank>[A-Z\+]+)\] )?(?<username>\w+)(?: \[(?<guildRank>\w+)\])?: (?<message>.+)$/;
 
   private static readonly CHAT_ERRORS: Record<string, string> = {
     "Sending packets too fast!": "Sending packets too fast!",
