@@ -1,0 +1,35 @@
+import { MinecraftCommand } from "../../contracts/Command.js";
+import type { MinecraftCommandContext } from "../../contracts/Command.js";
+import { HypixelAPI } from "../../api/HypixelAPI.js";
+
+export class Command extends MinecraftCommand {
+    private hypixelApi: HypixelAPI;
+
+    public name = 'commandname';
+    public description = 'Command description';
+    public aliases = [];
+
+    constructor(hypixelApi: HypixelAPI) {
+        super();
+        this.hypixelApi = hypixelApi;
+    }
+
+    public async execute(context: MinecraftCommandContext): Promise<void> {
+        const target = context.args[0] || context.username;
+
+        try {
+            const { player, guild } = await this.hypixelApi.getPlayer(target) || {};
+
+            if (!player) {
+                await context.reply(`Player '${target}' not found or API request failed.`);
+                return;
+            }
+
+            // ...
+
+        } catch (err: any) {
+            console.error(`[MINECRAFT Command] Error:`, err);
+            await context.reply(`[ERROR]: ${err}`);
+        }
+    }
+}
