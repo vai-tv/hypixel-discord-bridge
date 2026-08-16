@@ -1,5 +1,6 @@
 import { environment } from '../EnvHandler.js';
-import { Client, Player } from 'hypixel-api-reborn';
+import { Client } from 'hypixel-api-reborn';
+import type { Player } from 'hypixel-api-reborn';
 
 export class HypixelAPI {
     private hypixel: Client;
@@ -8,7 +9,7 @@ export class HypixelAPI {
     constructor() {
       this.apiKey = environment.minecraft.hypixelApiKey || '';
       if (!this.apiKey) throw new Error('Missing Hypixel API key in .env!');
-      this.hypixel = new Client(this.apiKey);
+      this.hypixel = new Client(this.apiKey, { cache: true });
     }
 
     public async getPlayer(username: string): Promise<Player | null> {
