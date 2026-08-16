@@ -104,7 +104,7 @@ export class DiscordManager {
                 // 5 second timeout
                 const timeout = setTimeout(async () => {
                     this.bridge.off('discordChatAck', ackHandler);
-                    await message.react('❌');
+                    await message.react('❌').catch(() => null);
                 }, 5000);
 
                 const ackHandler = (ackId: string) => {
@@ -128,7 +128,7 @@ export class DiscordManager {
         // Minecraft -> Discord
         this.bridge.on('minecraftChat', async (data: MinecraftChatMessage) => {
             if (data.channel !== 'debug') {
-                console.log(`[MC -> DISCORD] (${data.channel}): ${data.message}`);
+                console.log(`[MC -> DISCORD ${data.channel}] (${data.username}): ${data.message}`);
             }
             await this.handleMinecraftChat(data);
         });
