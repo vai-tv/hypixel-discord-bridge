@@ -93,20 +93,21 @@ export class MinecraftManager {
         });
 
         // Discord -> Minecraft
-        this.bridge.on('discordChat', (data: DiscordChatMessage) => {
+        this.bridge.on('discordChat', (message: DiscordChatMessage) => {
             if (!this.bot) return;
 
             // ignore self-echoes if the message username matches the bot's username
-            if (data.username.toLowerCase() === this.bot.username.toLowerCase()) return;
+            if (message.username.toLowerCase() === this.bot.username.toLowerCase()) return;
 
-            if (data.channel === 'guild') {
-                this.send(`/gc ${data.username}: ${data.message}`);
-            } else if (data.channel === 'officer') {
-                this.send(`/oc ${data.username}: ${data.message}`);
-            } else if (data.channel === 'debug') {
-                // Direct command injection from Discord Debug channel
-                this.send(data.message);
+            if (message.channel === 'guild') {
+                this.send(`/gc ${message.username}: ${message.message}`);
+            } else if (message.channel === 'officer') {
+                this.send(`/oc ${message.username}: ${message.message}`);
+            } else if (message.channel === 'debug') {
+                this.send(message.message);
             }
+
+            this.bridge.emitDiscordChatAck(message.id);
         });
     }
 }

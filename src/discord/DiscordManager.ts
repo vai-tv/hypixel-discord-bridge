@@ -126,11 +126,11 @@ export class DiscordManager {
         });
 
         // Minecraft -> Discord
-        this.bridge.on('minecraftChat', async (data: MinecraftChatMessage) => {
-            if (data.channel !== 'debug') {
-                console.log(`[MC -> DISCORD ${data.channel}] (${data.username}): ${data.message}`);
+        this.bridge.on('minecraftChat', async (message: MinecraftChatMessage) => {
+            if (message.channel !== 'debug') {
+                console.log(`[MC -> DISCORD ${message.channel}] (${message.username}): ${message.message}`);
             }
-            await this.handleMinecraftChat(data);
+            await this.handleMinecraftChat(message);
         });
     }
 
