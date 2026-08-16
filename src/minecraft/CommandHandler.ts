@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 
 import { MinecraftCommand } from "../contracts/Command.js";
-import type { ChatChannel } from "../bridge/Bridge.js";
+import type { ChatChannel, Bridge } from "../bridge/Bridge.js";
 import type { HypixelAPI } from '../api/HypixelAPI.js';
 import config from '../../config.json' with { type: "json" };
 
@@ -14,10 +14,19 @@ export class MinecraftCommandHandler {
     private prefix = config.bot.prefix || '!';
     private sendChat: SendChatFunction;
     private hypixelApi: HypixelAPI;
+    private bridge: Bridge;
+    private botUsernameGetter: () => string | undefined;
 
-    constructor(sendChat: SendChatFunction, hypixelApi: HypixelAPI) {
+    constructor(
+        sendChat: SendChatFunction,
+        hypixelApi: HypixelAPI,
+        bridge: Bridge,
+        getBotUsername: () => string | undefined
+    ) {
         this.sendChat = sendChat;
         this.hypixelApi = hypixelApi;
+        this.bridge = bridge;
+        this.botUsernameGetter = getBotUsername;
     }
 
     public async loadCommands(): Promise<void> {
@@ -30,27 +39,25 @@ export class MinecraftCommandHandler {
             return;
         } 
 
-    const commandFiles = fs.readdirSync(commandsPath).filter(file => 
-        (file.endsWith('.ts') || file.endsWith('.js')) && !file.endsWith('.d.ts')
-    );
+        const commandFiles = fs.readdirSync(commandsPath).filter(file => 
+            (file.endsWith('.ts') || file.endsWith('.js')) && !file.endsWith('.d.ts')
+        );
 
-    for (const file of commandFiles) {
-        const filePath = path.join(commandsPath, file);
-        const fileUrl = pathToFileURL(filePath).href;
+        for (const file of commandFiles) {
+            const filePath = path.join(commandsPath, file);
+            const fileUrl = pathToFileURL(filePath).href;
 
-        try {
-            const imported = await import(fileUrl);
+            try {
+                const imported = await import(fileUrl);
 
-            // find exported command class extending MinecraftCommand
-            for (const ExportedSymbol of Object.values(imported)) {
-                if (
-                    typeof ExportedSymbol === 'function' &&
-                    ExportedSymbol.prototype instanceof MinecraftCommand
-                )   {
-                    // instantiate the command class, injecting dependencies like HypixelAPI
-                    const commandInstance = new (ExportedSymbol as new (api: HypixelAPI) => MinecraftCommand)(this.hypixelApi);
-                    this.registerCommand(commandInstance);
-                    console.log(`[MinecraftCommandHandler] Loaded command ${commandInstance.name}`);
+                for (const ExportedSymbol of Object.values(imported)) {
+                    if (
+                        typeof ExportedSymbol === 'function' &&
+                        ExportedSymbol.prototype instanceof MinecraftCommand
+                    ) {
+                        const commandInstance = new (ExportedSymbol as new (api: HypixelAPI) => MinecraftCommand)(this.hypixelApi);
+                        this.registerCommand(commandInstance);
+                        console.log(`[MinecraftCommandHandler] Loaded command ${commandInstance.name}`);
                     }
                 }
             } catch (error) {
@@ -74,10 +81,10 @@ export class MinecraftCommandHandler {
 
         const command = this.commands.get(commandName)!;
 
-        // helper to format and send responses back through the message queue
         const reply = async (response: string) => {
             const cleanMsg = response.replace(/\r?\n|\r/g, ' ').slice(0, 250);
 
+            // 1. Send to Hypixel chat queue
             if (channel === 'guild') {
                 this.sendChat(`/gc ${cleanMsg}`);
             } else if (channel === 'officer') {
@@ -85,6 +92,13 @@ export class MinecraftCommandHandler {
             } else if (channel === 'debug') {
                 this.sendChat(cleanMsg);
             }
+
+            // 2. Emit directly to Discord via Bridge
+            this.bridge.emitMinecraftChat({
+                username: this.botUsernameGetter() || 'Bot',
+                message: cleanMsg,
+                channel,
+            });
         };
 
         try {
@@ -95,8 +109,8 @@ export class MinecraftCommandHandler {
                 reply,
             });
         } catch (err) {
-          console.error(`[MinecraftCommandHandler] Error running ${commandName}:`, err);
-          await reply(`Error executing command: ${commandName}`);
+            console.error(`[MinecraftCommandHandler] Error running ${commandName}:`, err);
+            await reply(`Error executing command: ${commandName}`);
         }
 
         return true;

@@ -32,8 +32,10 @@ export class MinecraftManager {
         
         this.hypixelApi = new HypixelAPI();
         this.commandHandler = new MinecraftCommandHandler(
-            (message) => this.send(message), 
-            this.hypixelApi
+            (msg) => this.send(msg),
+            this.hypixelApi,
+            this.bridge,
+            () => this.bot?.username
         );
         this.chatHandler = new ChatHandler(bridge, this.commandHandler, () => this.bot?.username);
     }
