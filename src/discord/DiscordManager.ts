@@ -88,17 +88,30 @@ export class DiscordManager {
 
             let channelType: ChatChannel | null = null;
 
-            if (message.channelId === environment.discord.guildChatId) {
-                channelType = 'guild';
-            } else if (message.channelId === environment.discord.officerChatId) {
-                channelType = 'officer';
-            } else if (message.channelId === environment.discord.debugChatId) {
-                channelType = 'debug';
-            }
+            if (message.channelId === environment.discord.guildChatId) channelType = 'guild';
+            else if (message.channelId === environment.discord.officerChatId) channelType = 'officer';
+            else if (message.channelId === environment.discord.debugChatId) channelType = 'debug';
 
             if (channelType) {
+                const messageId = message.id;
+
+                // 5 second timeout
+                const timeout = setTimeout(async () => {
+                    this.bridge.off('discordChatAck', ackHandler);
+                    await message.react('❌');
+                }, 5000);
+
+                const ackHandler = (ackId: string) => {
+                    if (ackId !== messageId) return;
+                    clearTimeout(timeout);
+                    this.bridge.off('discordChatAck', ackHandler);
+                };
+
+                this.bridge.on('discordChatAck', ackHandler);
+
                 console.log(`[DISCORD -> MC] (${channelType}): ${message.content}`);
                 this.bridge.emitDiscordChat({
+                    id: messageId,
                     username: message.author.displayName || message.author.username,
                     message: message.content,
                     channel: channelType
