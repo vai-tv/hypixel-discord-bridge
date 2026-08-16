@@ -2,8 +2,13 @@ import { Client, GatewayIntentBits, PermissionFlagsBits, TextChannel, WebhookCli
 import { Bridge } from "../bridge/Bridge.js";
 import type { MinecraftChatMessage, ChatChannel } from "../bridge/Bridge.js";
 import { environment } from "../EnvHandler.js";
+
 import config from '../../config.json' with { type: "json" };
+import messages from '../../messages.json' with { type: "json" };
+
 import { getUUID } from "../api/MojangAPI.js";
+import { replaceVariables } from "../utils/HelperFunctions.js";
+
 
 const REQUIRED_PERMISSIONS = [
     PermissionFlagsBits.SendMessages,
@@ -76,9 +81,9 @@ export class DiscordManager {
             if (environment.discord.guildServerId) {
                 const guild = await this.client.guilds.fetch(environment.discord.guildServerId).catch(() => null);
                 if (guild) {
-                console.log(`[DISCORD] Successfully found guild ${guild.name} (${guild.id})`);
+                    console.log(replaceVariables(messages.logs.discord.startup.guildfound, guild as Record<string, any>));
                 } else {
-                console.warn(`[DISCORD] Could not get guild with ID ${environment.discord.guildServerId}`);
+                    console.error(replaceVariables(messages.logs.discord.startup.guildnotfound, { id: environment.discord.guildServerId }));
                 }
             }
         });

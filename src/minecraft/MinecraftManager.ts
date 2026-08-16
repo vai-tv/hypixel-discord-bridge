@@ -6,6 +6,7 @@ import type { DiscordChatMessage } from '../bridge/Bridge.js';
 import { ChatHandler } from './ChatHandler.js';
 
 import config from '../../config.json' with { type: "json" };
+import messages from '../../messages.json' with { type: "json" };
 
 import { setTimeout } from 'node:timers/promises';
 
@@ -64,15 +65,15 @@ export class MinecraftManager {
         if (!this.bot) return;
 
         this.bot.on('login', () => {
-            console.log(`[MINECRAFT] ${this.bot?.username} joined Hypixel!`);
+            console.log(messages.logs.event.login.replace('{username}', this.bot?.username || 'Unknown'));
         });
 
         this.bot.on('kicked', (extra) => {
-            console.warn(`[MINECRAFT Warning] Kicked: ${extra}`);
+            console.warn(messages.logs.event.kicked.replace('{extra}', extra));
         });
 
         this.bot.on('end', async (extra) => {
-            console.warn(`[MINECRAFT Warning] Disconnected: ${extra}`);
+            console.warn(messages.logs.event.end.replace('{extra}', extra));
             const reconnect = config.bot.reconnect;
 
             // clean up listeners
@@ -82,7 +83,8 @@ export class MinecraftManager {
             }
 
             if (reconnect) {
-                console.log(`[MINECRAFT] Reconnecting in ${(reconnect.delay / 1000).toFixed(1)}s...`);
+                const timeout = (reconnect.delay / 1000).toFixed(1);
+                console.log(messages.logs.event.reconnect.replace('{time}', timeout.toString()));
                 await setTimeout(reconnect.delay);
                 this.connect();
                 reconnect.delay *= 1.3;
