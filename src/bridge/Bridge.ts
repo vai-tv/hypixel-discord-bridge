@@ -28,13 +28,13 @@ export class Bridge extends EventEmitter {
 
     public emitMinecraftChat(data: MinecraftChatMessage): void {
         if (data.channel !== 'debug') {
-            console.log(replaceVariables(messages.logs.chat.discordemit, data));
+            console.log(replaceVariables(messages.logs.chat.minecraftemit, data));
         }
         this.emit('minecraftChat', data);
     }
 
     public emitDiscordChat(data: DiscordChatMessage): void {
-        console.log(replaceVariables(messages.logs.chat.minecraftemit, data));
+        console.log(replaceVariables(messages.logs.chat.discordemit, data));
         this.emit('discordChat', data);
     }
 
