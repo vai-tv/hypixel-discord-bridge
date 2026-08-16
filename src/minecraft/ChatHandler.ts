@@ -1,8 +1,10 @@
 import { Bridge } from "../bridge/Bridge.js";
+import { MinecraftCommandHandler } from "./CommandHandler.js";
 
 export class ChatHandler {
     private bridge: Bridge;
     private botUsernameGetter: () => string | undefined;
+    private commandHandler: MinecraftCommandHandler;
 
     private static readonly GUILD_CHAT_REGEX =
         /^Guild > (?:\[(?<rank>[A-Z\+]+)\] )?(?<username>\w+)(?: \[(?<guildRank>\w+)\])?: (?<message>.+)$/;
@@ -16,12 +18,13 @@ export class ChatHandler {
         "You are AFK.": "You were timed out in Limbo for being AFK!",
     };
 
-    constructor(bridge: Bridge, getBotUsername: () => string | undefined) {
+    constructor(bridge: Bridge, commandHandler: MinecraftCommandHandler, getBotUsername: () => string | undefined) {
         this.bridge = bridge;
         this.botUsernameGetter = getBotUsername;
+        this.commandHandler = commandHandler;
     }
 
-    public handleChat(rawMessage: string): void {
+    public async handleChat(rawMessage: string): Promise<void> {
         // strip Minecraft section symbol color/formatting codes and whitespace
         const cleanMessage = rawMessage.replace(/§[0-9a-fk-or]/gi, '').trim();
         if (!cleanMessage) return;
@@ -48,6 +51,9 @@ export class ChatHandler {
             const { rank, username, message } = guildMatch.groups;
             if (!username || !message) return;
             if (username.toLowerCase() === currentBotUsername) return;
+
+            // check if it's a command
+            const isCommand = await this.commandHandler.handleMessage(username, message, 'guild');
 
             this.bridge.emitMinecraftChat({
                 username,
