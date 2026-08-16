@@ -5,7 +5,7 @@
         "reconnect" :
             {
                 "enabled" : true,
-                "delay" : 10000,
+                "delay" : 3000,
                 "max" : 3
             },
         "username" : "ilyashes"
