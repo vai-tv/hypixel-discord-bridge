@@ -4,6 +4,7 @@ import type { MinecraftChatMessage, ChatChannel } from "../bridge/Bridge.js";
 import { environment } from "../EnvHandler.js";
 import config from '../../config.json' with { type: "json" };
 import { getUUID } from "../api/MojangAPI.js";
+import { escape } from "node:querystring";
 
 const REQUIRED_PERMISSIONS = [
     PermissionFlagsBits.SendMessages,
@@ -12,6 +13,11 @@ const REQUIRED_PERMISSIONS = [
     PermissionFlagsBits.ManageWebhooks,
     PermissionFlagsBits.EmbedLinks
 ];
+
+function prepareMessage(rawMessage: string): string {
+    const formatted = rawMessage.replace(/§([0-9a-fk-or])/gi, '&$1');
+    return formatted.replace(/([\\*_`~>|#@\-])/g, '\\$1').trim();
+}
 
 export class DiscordManager {
     private client: Client;
@@ -131,10 +137,7 @@ export class DiscordManager {
     private async handleMinecraftChat(data: MinecraftChatMessage): Promise<void> {
         const { username, message, rank, channel } = data;
 
-        const cleanMessage = message
-            .replace(/§[0-9a-fk-or]/gi, '')
-            .replace(/\u00A0/g, ' ')
-            .trim();
+        const cleanMessage = prepareMessage(message);
         if (!cleanMessage) return;
 
         // debug channel
