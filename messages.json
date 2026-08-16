@@ -7,8 +7,8 @@
             "reconnect" : "[MINECRAFT] Reconnecting in {time}s..."
         },
         "chat" : {
-            "discordemit" : "[DISCORD -> MINECRAFT {channel}] {username}: {message}",
-            "minecraftemit" : "[MINECRAFT -> DISCORD {channel}] {username}: {message}"
+            "discordemit" : "[DISCORD{channel}] {username}: {message}",
+            "minecraftemit" : "[MINECRAFT {channel}] {username}: {message}"
         },
         "discord" : {
             "startup" : {
